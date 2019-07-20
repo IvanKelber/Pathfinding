@@ -21,40 +21,46 @@ public class PathFinding : MonoBehaviour
         Node startNode = grid.NodeFromWorldPosition(startPosition);
         Node targetNode = grid.NodeFromWorldPosition(targetPosition);
 
-        List<Node> openSet = new List<Node>();
+        Heap<Node> openSet = new Heap<Node>(grid.MaxSize);
         HashSet<Node> closedSet = new HashSet<Node>();
 
+        // Add startNode to set.
+        startNode.hCost = GetDistance(startNode, targetNode);
+        targetNode.gCost = GetDistance(startNode, targetNode);
         openSet.Add(startNode);
 
         while(openSet.Count > 0) {
-            Node currentNode = openSet[0];
-            foreach(Node n in openSet) {
-                if(n.fCost < currentNode.fCost ||  n.fCost == currentNode.fCost && n.hCost < currentNode.hCost) {
-                    currentNode = n;
-                }
-            }
-            openSet.Remove(currentNode);
+            // Find the node with lowest fCost in the open set
+            Node currentNode = openSet.Pop();
+            // UnityEngine.Debug.Log("Starting new round with " + currentNode.gridX + ", " + currentNode.gridY +" fcost: " + currentNode.fCost);
+            // openSet.Print();
+
             closedSet.Add(currentNode);
 
+            // If we have reached the target then we are done.
             if(currentNode == targetNode) {
                 grid.path = RetracePath(startNode, targetNode);
                 return;
             }
 
+            // Calculate the fCost of each walkable neighbor with respect to the current node
             foreach(Node neighbor in grid.FindNeighbors(currentNode)) {
                 if(!neighbor.walkable || closedSet.Contains(neighbor)) {
                     continue;
                 }
-
                 int newCostToNeighbor = currentNode.gCost + GetDistance(currentNode, neighbor);
                 if(newCostToNeighbor < neighbor.gCost || !openSet.Contains(neighbor)) {
                     neighbor.gCost = newCostToNeighbor;
                     neighbor.hCost = GetDistance(neighbor, targetNode);
                     neighbor.parent = currentNode;
-                    if(!openSet.Contains(neighbor)) 
+                    if(!openSet.Contains(neighbor)) {
                         openSet.Add(neighbor);
+                        // UnityEngine.Debug.Log("Adding neighbor: " + neighbor.fCost + " _ " +neighbor.HeapIndex + " Coordinates: " + neighbor.gridX + "," + neighbor.gridY);
+                        // openSet.Print();
+                    }
                 }
             }
+            // UnityEngine.Debug.Log("End of round fCost: " + currentNode.fCost);
         }
     }
 

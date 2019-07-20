@@ -4,6 +4,7 @@ using UnityEngine;
 
 public class Grid : MonoBehaviour
 {
+    public bool onlyDisplayPath = false;
     public LayerMask unwalkableMask;
     public Vector2 worldScale;
     public Transform player;
@@ -40,6 +41,12 @@ public class Grid : MonoBehaviour
         }
     }
 
+    public int MaxSize {
+        get {
+            return gridSizeX * gridSizeY;
+        }
+    }
+
     public List<Node> FindNeighbors(Node node) {
         List<Node> neighbors = new List<Node>();
         for(int i = -1; i <= 1; i++) {
@@ -70,24 +77,25 @@ public class Grid : MonoBehaviour
     }
 
     private void OnDrawGizmos() {
-        Gizmos.color = Color.cyan;
-        Gizmos.DrawWireCube(transform.position, new Vector3(worldScale.x, 1, worldScale.y));
-
-        if(grid != null) {
-            Node playerNode = NodeFromWorldPosition(player.position);
-            foreach(Node node in grid) {
-                if(node == playerNode) {
-                    Gizmos.color = Color.cyan;
-                } else {
+        if(onlyDisplayPath) {
+            if(path != null) {
+                foreach(Node node in path) {
+                    Gizmos.color = Color.black;
+                    Gizmos.DrawCube(node.worldPosition, new Vector3(1,0,1) * (nodeDiameter - offset) + Vector3.up);
+                }
+            }
+        } else {
+            if(grid != null) {
+                foreach(Node node in grid) {
                     Gizmos.color = node.walkable? Color.white : Color.red;
-                }
-                if(path != null) {
-                    if(path.Contains(node)) {
-                        Gizmos.color = Color.black;
+                    if(path != null) {
+                        if(path.Contains(node)) {
+                            Gizmos.color = Color.black;
+                        }
                     }
+                    Gizmos.DrawCube(node.worldPosition, new Vector3(1,0,1) * (nodeDiameter - offset) + Vector3.up);
+                    
                 }
-                Gizmos.DrawCube(node.worldPosition, new Vector3(1,0,1) * (nodeDiameter - offset) + Vector3.up);
-                
             }
         }
     }
