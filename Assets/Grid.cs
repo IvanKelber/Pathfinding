@@ -5,11 +5,13 @@ using UnityEngine;
 public class Grid : MonoBehaviour
 {
     public bool displayGrid = false;
-    public LayerMask unwalkableMask;
     public Vector2 worldScale;
-    public Transform player;
-    public Transform target;
     public float nodeRadius;
+
+    public LayerMask unwalkableMask;
+    public TerrainType[] walkableRegions;
+    private LayerMask walkableMask;
+    public Dictionary<int, int> penaltyMap = new Dictionary<int,int>();
 
     [Range(0,1)]
     public float offset = .1f;
@@ -23,6 +25,12 @@ public class Grid : MonoBehaviour
         nodeDiameter = nodeRadius * 2;
         gridSizeX = Mathf.RoundToInt(worldScale.x/nodeDiameter);
         gridSizeY = Mathf.RoundToInt(worldScale.y/nodeDiameter);
+
+        foreach(TerrainType t in walkableRegions) {
+            walkableMask |= t.terrainMask;
+            penaltyMap.Add((int)Mathf.Log(t.terrainMask, 2), t.terrainPenalty);
+        }
+
         CreateGrid();
     }
 
@@ -35,7 +43,18 @@ public class Grid : MonoBehaviour
             for(int y = 0; y < gridSizeY; y++) {
                 Vector3 worldPosition = bottomLeft + Vector3.right * (x * nodeDiameter + nodeRadius) + Vector3.forward * (y * nodeDiameter + nodeRadius);
                 bool walkable = !Physics.CheckSphere(worldPosition, nodeRadius, unwalkableMask);
-                grid[x,y] = new Node(walkable, worldPosition, x, y);
+                
+                int movementPenalty = 0;
+
+                if(walkable) {
+                    // Check which terrain type exists for that node.
+                    Ray ray = new Ray(worldPosition + Vector3.up * 10, Vector3.down);
+                    RaycastHit hit;
+                    if(Physics.Raycast(ray, out hit, 100, walkableMask)) {
+                        penaltyMap.TryGetValue(hit.collider.gameObject.layer, out movementPenalty);
+                    }
+                }
+                grid[x,y] = new Node(walkable, worldPosition, x, y, movementPenalty);
             }
         }
     }
@@ -82,6 +101,12 @@ public class Grid : MonoBehaviour
                 Gizmos.DrawCube(node.worldPosition, new Vector3(1,0,1) * (nodeDiameter - offset) + Vector3.up);
             }
         }
+    }
+
+    [System.Serializable]
+    public struct TerrainType {
+        public LayerMask terrainMask;
+        public int terrainPenalty;
     }
 }
 

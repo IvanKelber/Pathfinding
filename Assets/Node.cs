@@ -9,23 +9,25 @@ public class Node : IHeapItem<Node>
     public int gridX;
     public int gridY;
     private int heapIndex;
+    public int movementPenalty {
+        get;
+    }
 
     //==== For A* algorithm ====//
 
     // For retracing our chosen path.
     public Node parent;
-
     // Distance from the start node
     public int gCost;
-
     // Distance from the target node
     public int hCost;
 
-    public Node(bool _walkable, Vector3 _worldPosition, int _gridX, int _gridY) {
+    public Node(bool _walkable, Vector3 _worldPosition, int _gridX, int _gridY, int _penalty) {
         this.walkable = _walkable;
         this.worldPosition = _worldPosition;
         this.gridX = _gridX;
         this.gridY = _gridY;
+        this.movementPenalty = _penalty;
     }
 
     // For use in A* algorithm for node to node distance comparisons

@@ -5,11 +5,16 @@ using UnityEngine;
 public class Unit : MonoBehaviour
 {
     public Transform target;
-    public float speed = 5;
+    public float baseSpeed = 20;
+    private float speed;
+
     Vector3[] path;
     int targetIndex = 0;
 
+    public Grid grid;
+
     void Start() {
+        speed = baseSpeed;
         PathRequestManager.RequestPath(transform.position, target.position, OnPathFound);
     }
 
@@ -33,7 +38,15 @@ public class Unit : MonoBehaviour
                 currentWaypoint = path[targetIndex];
             }
             transform.position = Vector3.MoveTowards(transform.position, currentWaypoint, speed * Time.deltaTime);
+            UpdateSpeed();
             yield return null;
+        }
+    }
+
+    private void UpdateSpeed() {
+        if(grid != null) {
+            Node n = grid.NodeFromWorldPosition(transform.position);
+            speed = baseSpeed - n.movementPenalty;
         }
     }
 

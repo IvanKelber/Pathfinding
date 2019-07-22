@@ -52,7 +52,7 @@ public class PathFinding : MonoBehaviour
                     if(!neighbor.walkable || closedSet.Contains(neighbor)) {
                         continue;
                     }
-                    int newCostToNeighbor = currentNode.gCost + GetDistance(currentNode, neighbor);
+                    int newCostToNeighbor = currentNode.gCost + GetDistance(currentNode, neighbor) + neighbor.movementPenalty;
                     if(newCostToNeighbor < neighbor.gCost || !openSet.Contains(neighbor)) {
                         neighbor.gCost = newCostToNeighbor;
                         neighbor.hCost = GetDistance(neighbor, targetNode);
@@ -61,6 +61,8 @@ public class PathFinding : MonoBehaviour
                             openSet.Add(neighbor);
                             // UnityEngine.Debug.Log("Adding neighbor: " + neighbor.fCost + " _ " +neighbor.HeapIndex + " Coordinates: " + neighbor.gridX + "," + neighbor.gridY);
                             // openSet.Print();
+                        } else {
+                            openSet.UpdateItem(neighbor);
                         }
                     }
                 }

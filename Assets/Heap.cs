@@ -33,7 +33,7 @@ public class Heap<T> where T : IHeapItem<T>
         return popped;
     }
 
-    public void Update(T item) {
+    public void UpdateItem(T item) {
         SortUp(item);
     }
 
