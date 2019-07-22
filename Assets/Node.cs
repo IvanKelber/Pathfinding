@@ -11,6 +11,7 @@ public class Node : IHeapItem<Node>
     private int heapIndex;
     public int movementPenalty {
         get;
+        set;
     }
 
     //==== For A* algorithm ====//

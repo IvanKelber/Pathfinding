@@ -13,6 +13,8 @@ public class Grid : MonoBehaviour
     private LayerMask walkableMask;
     public Dictionary<int, int> penaltyMap = new Dictionary<int,int>();
 
+    public int obstacleProximityPenalty = 10;
+
     [Range(0,1)]
     public float offset = .1f;
     Node[,] grid;
@@ -20,6 +22,8 @@ public class Grid : MonoBehaviour
     float nodeDiameter;
     int gridSizeX, gridSizeY;
 
+    int penaltyMin = int.MaxValue;
+    int penaltyMax = int.MinValue;
 
     private void Awake() {
         nodeDiameter = nodeRadius * 2;
@@ -46,17 +50,21 @@ public class Grid : MonoBehaviour
                 
                 int movementPenalty = 0;
 
-                if(walkable) {
-                    // Check which terrain type exists for that node.
-                    Ray ray = new Ray(worldPosition + Vector3.up * 10, Vector3.down);
-                    RaycastHit hit;
-                    if(Physics.Raycast(ray, out hit, 100, walkableMask)) {
-                        penaltyMap.TryGetValue(hit.collider.gameObject.layer, out movementPenalty);
-                    }
+                // Check which terrain type exists for that node.
+                Ray ray = new Ray(worldPosition + Vector3.up * 10, Vector3.down);
+                RaycastHit hit;
+                if(Physics.Raycast(ray, out hit, 100, walkableMask)) {
+                    penaltyMap.TryGetValue(hit.collider.gameObject.layer, out movementPenalty);
                 }
+
+                if(!walkable) {
+                    movementPenalty += obstacleProximityPenalty;
+                }
+                
                 grid[x,y] = new Node(walkable, worldPosition, x, y, movementPenalty);
             }
         }
+        BlurPenalty(5);
     }
 
     public int MaxSize {
@@ -64,6 +72,58 @@ public class Grid : MonoBehaviour
             return gridSizeX * gridSizeY;
         }
     }
+
+    void BlurPenalty(int blurSize) {
+        int kernelSize = (blurSize * 2) + 1;
+        int kernelOverflow = blurSize;
+
+        int[,] horizontalPenalty = new int[gridSizeX,gridSizeY];
+        int[,] verticalPenalty = new int[gridSizeX,gridSizeY];
+
+        //Horizontal
+        for(int y = 0; y < gridSizeY; y++) {
+            // First we calculate the first edge value of each row.
+            for(int x = -kernelOverflow; x <= kernelOverflow; x++) {
+                int kernelIndex = Mathf.Clamp(x, 0, kernelOverflow);
+                horizontalPenalty[0,y] += grid[kernelIndex,y].movementPenalty;
+            }
+
+            // Then we can use dynamic programming to figure out the rest.
+            for(int x = 1; x < gridSizeX; x++) {
+                int removeIndex = Mathf.Clamp(x - kernelOverflow, 0, gridSizeX - kernelOverflow - 1);
+                int addIndex = Mathf.Clamp(x + kernelOverflow, 0, gridSizeX - 1);
+                horizontalPenalty[x,y] = horizontalPenalty[x-1,y] - grid[removeIndex,y].movementPenalty + grid[addIndex,y].movementPenalty;
+            }
+        }
+
+        //Vertical
+        for(int x = 0; x < gridSizeX; x++) {
+            // First we calculate the first edge value of each row.
+            for(int y = -kernelOverflow; y <= kernelOverflow; y++) {
+                int kernelIndex = Mathf.Clamp(y, 0, kernelOverflow);
+                verticalPenalty[x,0] += horizontalPenalty[x,kernelIndex];
+            }
+
+            // Then we can use dynamic programming to figure out the rest.
+            for(int y = 1; y < gridSizeY; y++) {
+                int removeIndex = Mathf.Clamp(y - kernelOverflow, 0, gridSizeY - kernelOverflow - 1);
+                int addIndex = Mathf.Clamp(y + kernelOverflow, 0, gridSizeY - 1);
+                verticalPenalty[x,y] = verticalPenalty[x, y-1] - horizontalPenalty[x,removeIndex] + horizontalPenalty[x,addIndex];
+                int blurredPenalty = Mathf.RoundToInt((float)verticalPenalty[x,y]/ (kernelSize*kernelSize));
+
+                if(blurredPenalty < penaltyMin) {
+                    penaltyMin = blurredPenalty;
+                }
+                if(blurredPenalty > penaltyMax) {
+                    penaltyMax = blurredPenalty;
+                }
+
+                grid[x,y].movementPenalty = blurredPenalty;
+            }
+        }
+
+
+    }    
 
     public List<Node> FindNeighbors(Node node) {
         List<Node> neighbors = new List<Node>();
@@ -97,7 +157,8 @@ public class Grid : MonoBehaviour
     private void OnDrawGizmos() {
         if(grid != null && displayGrid) {
             foreach(Node node in grid) {
-                Gizmos.color = node.walkable? Color.white : Color.red;
+                Gizmos.color = Color.Lerp(Color.white, Color.black, Mathf.InverseLerp(penaltyMin, penaltyMax, node.movementPenalty));
+                Gizmos.color = node.walkable? Gizmos.color : Color.red;
                 Gizmos.DrawCube(node.worldPosition, new Vector3(1,0,1) * (nodeDiameter - offset) + Vector3.up);
             }
         }
