@@ -73,6 +73,7 @@ public class Grid : MonoBehaviour
         }
     }
 
+    // Smooth movementpenalties across the entire grid
     void BlurPenalty(int blurSize) {
         int kernelSize = (blurSize * 2) + 1;
         int kernelOverflow = blurSize;
@@ -103,14 +104,18 @@ public class Grid : MonoBehaviour
                 int kernelIndex = Mathf.Clamp(y, 0, kernelOverflow);
                 verticalPenalty[x,0] += horizontalPenalty[x,kernelIndex];
             }
+            // Get the blur for the first row.
+            int blurredPenalty = Mathf.RoundToInt((float)verticalPenalty[x,0]/ (kernelSize*kernelSize));
+            grid[x,0].movementPenalty = blurredPenalty;
 
             // Then we can use dynamic programming to figure out the rest.
             for(int y = 1; y < gridSizeY; y++) {
                 int removeIndex = Mathf.Clamp(y - kernelOverflow, 0, gridSizeY - kernelOverflow - 1);
                 int addIndex = Mathf.Clamp(y + kernelOverflow, 0, gridSizeY - 1);
                 verticalPenalty[x,y] = verticalPenalty[x, y-1] - horizontalPenalty[x,removeIndex] + horizontalPenalty[x,addIndex];
-                int blurredPenalty = Mathf.RoundToInt((float)verticalPenalty[x,y]/ (kernelSize*kernelSize));
+                blurredPenalty = Mathf.RoundToInt((float)verticalPenalty[x,y]/ (kernelSize*kernelSize));
 
+                // For visualizing the movementPenalties in gizmos.
                 if(blurredPenalty < penaltyMin) {
                     penaltyMin = blurredPenalty;
                 }
