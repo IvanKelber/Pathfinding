@@ -4,11 +4,16 @@ using UnityEngine;
 
 public class Unit : MonoBehaviour
 {
+    const float pathUpdateMoveThreshold = .5f;
+    const float minPathUpdateTime = .2f;
+
     public Transform target;
     public float baseSpeed = 20;
     public float turnDistance = 5;
     public float turnSpeed = 3;
     private float speed;
+
+
 
     Path path;
 
@@ -16,7 +21,7 @@ public class Unit : MonoBehaviour
 
     void Start() {
         speed = baseSpeed;
-        PathRequestManager.RequestPath(transform.position, target.position, OnPathFound);
+        StartCoroutine(UpdatePath());
     }
 
     public void OnPathFound(Vector3[] waypoints, bool pathSuccessful) {
@@ -34,9 +39,10 @@ public class Unit : MonoBehaviour
 
         while(followingPath) {
             Vector2 pos2D = new Vector2(transform.position.x, transform.position.z);
-            if(path.turnBoundaries[pathIndex].HasCrossedLine(pos2D)) {
+            while(path.turnBoundaries[pathIndex].HasCrossedLine(pos2D)) {
                 if(pathIndex == path.finishLineIndex) {
                     followingPath = false; //break
+                    break;
                 } else {
                     pathIndex++;
                 }
@@ -49,6 +55,23 @@ public class Unit : MonoBehaviour
             }
 
             yield return null;
+        }
+    }
+
+    IEnumerator UpdatePath() {
+        if(Time.timeSinceLevelLoad < .3f) {
+            yield return new WaitForSeconds(.3f);
+        }
+        PathRequestManager.RequestPath(transform.position, target.position, OnPathFound);
+        float sqrMoveThreshold = pathUpdateMoveThreshold * pathUpdateMoveThreshold;
+        Vector3 posOld = target.position;
+        while(true) {
+            yield return new WaitForSeconds(minPathUpdateTime);
+            if((target.position - posOld).sqrMagnitude > sqrMoveThreshold) {
+                PathRequestManager.RequestPath(transform.position, target.position, OnPathFound);
+                posOld = target.position;
+            }
+
         }
     }
 
