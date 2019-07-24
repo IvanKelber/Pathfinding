@@ -48,6 +48,14 @@ public class Line
         return GetSide(p) != approachSide;
     }
 
+    public float DistanceFromPoint(Vector2 p) {
+        float perpendicularYIntercept = p.y - perpendicularSlope * p.x;
+        float intersectX = (perpendicularYIntercept - y_intercept) / (slope - perpendicularSlope);
+
+        float intersectY = slope * intersectX + y_intercept;
+        return Vector2.Distance(p, new Vector2(intersectX, intersectY));
+    }
+
     public void DrawWithGizmos(float length) {
         Vector3 lineDirection = new Vector3(1, 0, slope).normalized;
         Vector3 lineCenter = new Vector3(pointOnLine_1.x, 0, pointOnLine_1.y);
